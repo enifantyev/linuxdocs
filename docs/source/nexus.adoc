@@ -1,0 +1,77 @@
+
+:toc:
+:toc-title: Оглавление
+:toclevels: 3
+
+:sectnums:
+
+=== Использованные материалы
+
+  1. https://help.sonatype.com/repomanager3/installation-and-upgrades
+  1. https://help.sonatype.com/repomanager3/installation-and-upgrades/run-as-a-service
+
+=== Установка Java 8
+1. Установите Java восьмой версии следующей командой: +
+
+  [,shell]
+  ----
+  dnf install java-1.8.0-openjdk
+  ----
+
+2. Проверьте используемую версию Java по умолчанию:
+
+  [,console]
+  ----
+  java -version
+  ----
+
+Пример ожидаемого вывода: +
+[,console]
+----
+openjdk version "1.8.0_275"
+OpenJDK Runtime Environment (build 1.8.0_275-b01)
+OpenJDK 64-Bit Server VM (build 25.275-b01, mixed mode)
+----
+
+=== Создание локальной УЗ
+==== Создайте локальную УЗ под которой будет работать Nexus Repository Manager:
+```bash
+useradd --system --no-create-home \
+--home-dir /opt/nexus \
+--shell /sbin/nologin nexus
+```
+
+=== Скачивание и распаковка
+```bash
+VER='nexus-3.58.1-02'
+
+curl -LO https://download.sonatype.com/nexus/3/${VER}-unix.tar.gz
+tar Cxvf /opt ${VER}-unix.tar.gz
+ln -sr /opt/${VER} /opt/nexus
+chown -R nexus:nexus /opt/${VER}* /opt/sonatype-work
+```
+
+=== Создание systemd-юнита
+
+```bash
+cat << EOF > /etc/systemd/system/nexus.service
+[Unit]
+Description=nexus service
+After=network.target
+  
+[Service]
+Type=forking
+LimitNOFILE=65536
+ExecStart=/opt/nexus/bin/nexus start
+ExecStop=/opt/nexus/bin/nexus stop 
+User=nexus
+Restart=on-abort
+TimeoutSec=600
+  
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now nexus
+```
